@@ -9,6 +9,18 @@ import (
 	"strings"
 )
 
+func Fetch(urlStr string, header ...string) (string, error) {
+	return Expect200(Get(urlStr, header...)).String()
+}
+
+func FetchBytes(urlStr string, header ...string) ([]byte, error) {
+	return Expect200(Get(urlStr, header...)).Bytes()
+}
+
+func FetchJson(urlStr string, v interface{}, header ...string) error {
+	return Expect200(Get(urlStr, header...)).Json(v)
+}
+
 func Get(urlStr string, header ...string) (*http.Response, error) {
 	return Do("GET", urlStr, nil, header...)
 }

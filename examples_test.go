@@ -1,20 +1,58 @@
 package ht
 
 import (
+	"github.com/smancke/go-ht/htest"
 	. "github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
 
+func Test_Fetch(t *testing.T) {
+	server := htest.StringServer("Hello World", 200)
+	defer server.Close()
+
+	result, err := Fetch(server.URL)
+	NoError(t, err)
+	Equal(t, "Hello World", result)
+
+}
+
+func Test_Fetch_Error(t *testing.T) {
+	server := htest.StringServer("Hello World", 500)
+	defer server.Close()
+
+	_, err := Fetch(server.URL)
+	Error(t, err)
+}
+
+func Test_FetchJson(t *testing.T) {
+	server := htest.StringServer(`{"some": "value"}`, 200, TypeJson)
+	defer server.Close()
+
+	result := map[string]string{}
+	err := FetchJson(server.URL, &result)
+	NoError(t, err)
+	Equal(t, "value", result["some"])
+
+}
+
+func Test_FetchJson_Error(t *testing.T) {
+	server := htest.StringServer(`{"some": "value"`, 200, TypeJson)
+	defer server.Close()
+
+	result := map[string]string{}
+	err := FetchJson(server.URL, &result)
+	Error(t, err)
+}
+
 func Test_Get(t *testing.T) {
-	expected := "Hello World"
-	server := StringServer(expected, 200)
+	server := htest.StringServer("Hello World", 200)
 	defer server.Close()
 
 	result, err := Expect200(Get(server.URL)).String()
 	NoError(t, err)
-	Equal(t, expected, result)
+	Equal(t, "Hello World", result)
 
 	_, err = Expect500(Get(server.URL)).String()
 	Error(t, err)
@@ -22,7 +60,7 @@ func Test_Get(t *testing.T) {
 
 func Test_Get500(t *testing.T) {
 	expected := "Hello World"
-	server := StringServer(expected, 500)
+	server := htest.StringServer(expected, 500)
 	defer server.Close()
 
 	_, err := Expect200(Get(server.URL)).String()
@@ -40,20 +78,11 @@ func Test_Get500(t *testing.T) {
 }
 
 func Test_GetJson(t *testing.T) {
-	expected := `{"some": "value"}`
-	server := StringServer(expected, 200, TypeJson)
+	server := htest.StringServer(`{"some": "value"}`, 200, TypeJson)
 	defer server.Close()
 
 	result := map[string]string{}
 	err := Expect200(Get(server.URL)).Json(&result)
 	NoError(t, err)
 	Equal(t, "value", result["some"])
-}
-
-func StringServer(responseBody string, code int, header ...string) *httptest.Server {
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		SetHeader(w.Header(), header...)
-		w.WriteHeader(code)
-		w.Write([]byte(responseBody))
-	}))
 }
